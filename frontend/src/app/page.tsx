@@ -1,74 +1,18 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 // app/page.tsx
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import WeatherIcon from '@/components/WeatherIcon';
 import DailyForecast from '@/components/DailyForecast';
 import WindStatus from '@/components/WindStatus';
 import HumidityStatus from '@/components/HumidityStatus';
-
-// Backend API URL (should be in environment variable in production)
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:8000/api/weather';
-
-// TypeScript interfaces
-interface WeatherData {
-  name: string;
-  main: {
-    temp: number;
-    humidity: number;
-  };
-  weather: {
-    id: number;
-    main: string;
-    description: string;
-    icon: string;
-  }[];
-  wind: {
-    speed: number;
-  };
-  dt: number;
-  sys: {
-    country: string;
-  };
-}
-
-interface ForecastDay {
-  dt: number;
-  main: {
-    temp: number;
-  };
-  weather: {
-    id: number;
-    main: string;
-    description: string;
-    icon: string;
-  }[];
-}
-
-interface GeocodingData {
-  name: string;
-  lat: number;
-  lon: number;
-  country: string;
-}
-
-interface AllWeatherData {
-  geocoding: GeocodingData;
-  current: WeatherData;
-  forecast: {
-    list: ForecastDay[];
-    city: {
-      name: string;
-      country: string;
-    };
-  };
-}
+import { fetchWeatherByCity, fetchWeatherByCoordinates, WeatherResponse } from '@/services/weatherService';
 
 export default function WeatherDashboard() {
   const [city, setCity] = useState('Nairobi');
   const [searchCity, setSearchCity] = useState('');
-  const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
-  const [forecastData, setForecastData] = useState<ForecastDay[]>([]);
+  const [weatherData, setWeatherData] = useState<WeatherResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isCelsius, setIsCelsius] = useState(true);
@@ -90,42 +34,50 @@ export default function WeatherDashboard() {
     });
   };
 
-  // Fetch weather data from our Laravel backend API
-  const fetchWeatherData = useCallback(async (cityName: string) => {
+  // Extract daily forecasts from the forecast data
+  const getDailyForecasts = () => {
+    if (!weatherData?.forecast?.list) return [];
+    
+    const todayDate = new Date().setHours(0, 0, 0, 0);
+    const uniqueDays = new Map();
+    
+    weatherData.forecast.list.forEach(item => {
+      const forecastDate = new Date(item.dt * 1000);
+      const forecastDay = forecastDate.setHours(0, 0, 0, 0);
+      
+      // Skip today's forecasts
+      if (forecastDay === todayDate) return;
+      
+      // Get noon forecasts or closest to noon
+      if (!uniqueDays.has(forecastDay) || 
+          Math.abs(forecastDate.getHours() - 12) < 
+          Math.abs(uniqueDays.get(forecastDay).getHours() - 12)) {
+        uniqueDays.set(forecastDay, {
+          dt: item.dt,
+          temp: item.main.temp,
+          icon: item.weather[0].icon
+        });
+      }
+    });
+    
+    return Array.from(uniqueDays.values()).slice(0, 3);
+  };
+
+  // Fetch weather data by city name
+  const fetchWeatherData = async (cityName: string) => {
     try {
       setLoading(true);
       setError('');
       
-      // Use the all-in-one endpoint from our Laravel backend
-      const response = await fetch(`${API_URL}/all?city=${encodeURIComponent(cityName)}&units=${isCelsius ? 'metric' : 'imperial'}`);
-      
-      if (!response.ok) {
-        // Handle HTTP errors
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch weather data');
-      }
-      
-      const data: AllWeatherData = await response.json();
-      
-      setWeatherData(data.current);
-      
-      // Process forecast data - get one forecast per day (noon) for the next 3 days
-      const dailyForecasts = data.forecast.list
-        .filter((item, index) => {
-          const itemDate = new Date(item.dt * 1000);
-          const today = new Date();
-          return itemDate.getDate() !== today.getDate() && index % 8 === 0;
-        })
-        .slice(0, 3);
-      
-      setForecastData(dailyForecasts);
-      setCity(data.current.name);
+      const data = await fetchWeatherByCity(cityName, isCelsius ? 'metric' : 'imperial');
+      setWeatherData(data);
+      setCity(data.location.city);
       setLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
       setLoading(false);
     }
-  }, [isCelsius]);
+  };
 
   // Handle search form submission
   const handleSearch = (e: React.FormEvent) => {
@@ -135,11 +87,51 @@ export default function WeatherDashboard() {
     }
   };
 
-  // Removed unused toggleUnit function
+  // Toggle temperature unit
+  const toggleUnit = () => {
+    setIsCelsius(!isCelsius);
+    // Refetch data with new unit
+    if (city) {
+      fetchWeatherData(city);
+    }
+  };
+
+  // Get user's location if they allow it
+  const getUserLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          try {
+            setLoading(true);
+            const { latitude, longitude } = position.coords;
+            const data = await fetchWeatherByCoordinates(
+              latitude, 
+              longitude, 
+              isCelsius ? 'metric' : 'imperial'
+            );
+            setWeatherData(data);
+            setCity(data.location.city);
+            setLoading(false);
+          } catch (err) {
+            setError(err instanceof Error ? err.message : 'An unknown error occurred');
+            setLoading(false);
+          }
+        },
+        (err) => {
+          console.error('Error getting location:', err);
+          // Fall back to default city
+          fetchWeatherData(city);
+        }
+      );
+    } else {
+      // Geolocation not supported, use default city
+      fetchWeatherData(city);
+    }
+  };
 
   // Initial load
   useEffect(() => {
-    fetchWeatherData(city);
+    getUserLocation();
     
     // Update date every minute
     const interval = setInterval(() => {
@@ -147,7 +139,7 @@ export default function WeatherDashboard() {
     }, 60000);
     
     return () => clearInterval(interval);
-  }, [city, fetchWeatherData]);
+  }, []);
 
   if (loading && !weatherData) {
     return (
@@ -167,6 +159,8 @@ export default function WeatherDashboard() {
     );
   }
 
+  const dailyForecasts = getDailyForecasts();
+
   return (
     <div className="container mx-auto p-4 max-w-6xl">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 bg-white rounded-lg shadow-lg overflow-hidden">
@@ -175,9 +169,9 @@ export default function WeatherDashboard() {
           {/* Weather icon and temp */}
           <div className="mb-4">
             <div className="flex justify-center">
-              {weatherData && (
+              {weatherData && weatherData.current && (
                 <WeatherIcon 
-                  iconCode={weatherData.weather[0].icon}
+                  iconCode={weatherData.current.weather[0].icon}
                   size={120}
                   className="mb-4"
                 />
@@ -185,10 +179,11 @@ export default function WeatherDashboard() {
             </div>
             <div className="text-center">
               <h1 className="text-5xl font-bold">
-                {weatherData && convertTemp(weatherData.main.temp)}°{isCelsius ? 'C' : 'F'}
+                {weatherData && weatherData.current && 
+                  convertTemp(weatherData.current.main.temp)}°{isCelsius ? 'C' : 'F'}
               </h1>
               <p className="text-2xl text-gray-600 mt-2">
-                {weatherData?.weather[0].main}
+                {weatherData?.current?.weather[0].main}
               </p>
             </div>
           </div>
@@ -203,7 +198,7 @@ export default function WeatherDashboard() {
               })}
             </p>
             <p className="text-xl font-medium">
-              {weatherData?.name}, {weatherData?.sys.country}
+              {weatherData?.location?.city}, {weatherData?.location?.country}
             </p>
           </div>
         </div>
@@ -226,19 +221,13 @@ export default function WeatherDashboard() {
             <div className="flex gap-2">
               <button 
                 className={`btn ${isCelsius ? 'btn-primary' : 'btn-outline'}`}
-                onClick={() => {
-                  setIsCelsius(true);
-                  if (city) fetchWeatherData(city);
-                }}
+                onClick={() => toggleUnit()}
               >
                 °C
               </button>
               <button 
                 className={`btn ${!isCelsius ? 'btn-primary' : 'btn-outline'}`}
-                onClick={() => {
-                  setIsCelsius(false);
-                  if (city) fetchWeatherData(city);
-                }}
+                onClick={() => toggleUnit()}
               >
                 °F
               </button>
@@ -247,12 +236,12 @@ export default function WeatherDashboard() {
           
           {/* 3-day forecast */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            {forecastData.map((day, index) => (
+            {dailyForecasts.map((day, index) => (
               <DailyForecast
                 key={index}
                 date={formatDate(day.dt)}
-                temp={convertTemp(day.main.temp)}
-                icon={day.weather[0].icon}
+                temp={convertTemp(day.temp)}
+                icon={day.icon}
                 unit={isCelsius ? 'C' : 'F'}
               />
             ))}
@@ -261,10 +250,10 @@ export default function WeatherDashboard() {
           {/* Weather details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <WindStatus 
-              speed={weatherData?.wind.speed || 0} 
+              speed={weatherData?.current?.wind?.speed || 0} 
             />
             <HumidityStatus 
-              humidity={weatherData?.main.humidity || 0} 
+              humidity={weatherData?.current?.main?.humidity || 0} 
             />
           </div>
         </div>
