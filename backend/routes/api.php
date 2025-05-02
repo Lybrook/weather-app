@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\WeatherController;
 
 /*
 |--------------------------------------------------------------------------
@@ -14,6 +15,17 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+// Weather API endpoints
+Route::prefix('weather')->group(function () {
+    // Geocoding endpoint
+    Route::get('/geocode', [WeatherController::class, 'geocode']);
+    
+    // Current weather endpoint
+    Route::get('/current', [WeatherController::class, 'currentWeather']);
+    
+    // Weather forecast endpoint
+    Route::get('/forecast', [WeatherController::class, 'forecast']);
+    
+    // All weather data at once (geocoding + current + forecast)
+    Route::get('/all', [WeatherController::class, 'allWeatherData']);
 });
