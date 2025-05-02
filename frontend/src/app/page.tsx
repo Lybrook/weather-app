@@ -15,15 +15,13 @@ export default function WeatherDashboard() {
   const [weatherData, setWeatherData] = useState<WeatherResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [locationError, setLocationError] = useState('');
   const [isCelsius, setIsCelsius] = useState(true);
   const [date, setDate] = useState(new Date());
 
   // Convert temperature based on selected unit
   const convertTemp = (temp: number) => {
-    if (isCelsius) {
-      return Math.round(temp);
-    }
-    return Math.round((temp * 9) / 5 + 32);
+    return Math.round(temp);
   };
 
   const formatDate = (timestamp: number) => {
@@ -51,7 +49,7 @@ export default function WeatherDashboard() {
       // Get noon forecasts or closest to noon
       if (!uniqueDays.has(forecastDay) || 
           Math.abs(forecastDate.getHours() - 12) < 
-          Math.abs(uniqueDays.get(forecastDay).getHours() - 12)) {
+          Math.abs(new Date(uniqueDays.get(forecastDay).dt * 1000).getHours() - 12)) {
         uniqueDays.set(forecastDay, {
           dt: item.dt,
           temp: item.main.temp,
@@ -99,6 +97,7 @@ export default function WeatherDashboard() {
   // Get user's location if they allow it
   const getUserLocation = () => {
     if (navigator.geolocation) {
+      setLocationError('');
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           try {
@@ -115,18 +114,51 @@ export default function WeatherDashboard() {
           } catch (err) {
             setError(err instanceof Error ? err.message : 'An unknown error occurred');
             setLoading(false);
+            // Fall back to default city
+            fetchWeatherData(city);
           }
         },
         (err) => {
           console.error('Error getting location:', err);
+          
+          // Handle specific geolocation errors
+          let errorMessage = '';
+          switch(err.code) {
+            case 1: // PERMISSION_DENIED
+              errorMessage = 'Location access was denied. Using default city.';
+              break;
+            case 2: // POSITION_UNAVAILABLE
+              errorMessage = 'Your location could not be determined. Using default city.';
+              break;
+            case 3: // TIMEOUT
+              errorMessage = 'Location request timed out. Using default city.';
+              break;
+            default:
+              errorMessage = 'An unknown location error occurred. Using default city.';
+          }
+          
+          setLocationError(errorMessage);
           // Fall back to default city
           fetchWeatherData(city);
+        },
+        // Add options for better performance and user experience
+        {
+          enableHighAccuracy: false, // Set to false for faster response
+          timeout: 10000, // 10 seconds timeout
+          maximumAge: 600000 // Cache location for 10 minutes
         }
       );
     } else {
-      // Geolocation not supported, use default city
+      // Geolocation not supported
+      setLocationError('Location services are not supported by your browser. Using default city.');
       fetchWeatherData(city);
     }
+  };
+
+  // Function to retry getting user location
+  const retryGeolocation = () => {
+    setLocationError('');
+    getUserLocation();
   };
 
   // Initial load
@@ -205,6 +237,19 @@ export default function WeatherDashboard() {
         
         {/* Right panel - Search, forecast and details */}
         <div className="md:col-span-8 p-6">
+          {/* Location error notification */}
+          {locationError && (
+            <div className="mb-4 alert alert-warning flex justify-between items-center">
+              <span>{locationError}</span>
+              <button 
+                onClick={retryGeolocation} 
+                className="btn btn-sm btn-outline"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+          
           {/* Search bar and unit toggle */}
           <div className="flex gap-2 mb-8">
             <form onSubmit={handleSearch} className="flex-grow flex gap-2">
@@ -232,6 +277,20 @@ export default function WeatherDashboard() {
                 °F
               </button>
             </div>
+          </div>
+          
+          {/* Current location button */}
+          <div className="mb-4">
+            <button 
+              onClick={retryGeolocation} 
+              className="btn btn-outline btn-sm"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Use My Location
+            </button>
           </div>
           
           {/* 3-day forecast */}

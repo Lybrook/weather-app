@@ -1,4 +1,3 @@
-// components/HumidityStatus.tsx
 import React from 'react';
 import { Droplet } from 'lucide-react';
 

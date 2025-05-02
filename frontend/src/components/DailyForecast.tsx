@@ -1,4 +1,3 @@
-// components/DailyForecast.tsx
 import React from 'react';
 import WeatherIcon from './WeatherIcon';
 
