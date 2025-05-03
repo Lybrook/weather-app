@@ -19,7 +19,9 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['https://weather-piebvskjx-lybrooks-projects.vercel.app/'], // Add your frontend URL
+    'allowed_origins' => [
+    env('CORS_ALLOWED_ORIGINS', 'https://weather-piebvskjx-lybrooks-projects.vercel.app/'),
+],
 
     'allowed_origins_patterns' => [],
 
