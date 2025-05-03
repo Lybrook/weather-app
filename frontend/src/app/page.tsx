@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 // app/page.tsx
 "use client";
 
@@ -7,7 +6,7 @@ import WeatherIcon from '@/components/WeatherIcon';
 import DailyForecast from '@/components/DailyForecast';
 import WindStatus from '@/components/WindStatus';
 import HumidityStatus from '@/components/HumidityStatus';
-import { fetchWeatherByCity, fetchWeatherByCoordinates, WeatherResponse } from '@/services/weatherService';
+import { fetchWeatherByCity, WeatherResponse } from '@/services/weatherService';
 
 export default function WeatherDashboard() {
   const [city, setCity] = useState('Nairobi');
@@ -15,8 +14,15 @@ export default function WeatherDashboard() {
   const [weatherData, setWeatherData] = useState<WeatherResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [locationError, setLocationError] = useState('');
-  const [isCelsius, setIsCelsius] = useState(true);
+  // Get the temperature unit from localStorage or default to celsius
+  const [isCelsius, setIsCelsius] = useState(() => {
+    // Check if we're in the browser environment
+    if (typeof window !== 'undefined') {
+      const savedUnit = localStorage.getItem('temperatureUnit');
+      return savedUnit === 'imperial' ? false : true;
+    }
+    return true; // Default to celsius
+  });
   const [date, setDate] = useState(new Date());
 
   // Convert temperature based on selected unit
@@ -87,83 +93,23 @@ export default function WeatherDashboard() {
 
   // Toggle temperature unit
   const toggleUnit = () => {
-    setIsCelsius(!isCelsius);
+    const newUnit = !isCelsius;
+    setIsCelsius(newUnit);
+    
+    // Save to localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('temperatureUnit', newUnit ? 'metric' : 'imperial');
+    }
+    
     // Refetch data with new unit
     if (city) {
       fetchWeatherData(city);
     }
   };
 
-  // Get user's location if they allow it
-  const getUserLocation = () => {
-    if (navigator.geolocation) {
-      setLocationError('');
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          try {
-            setLoading(true);
-            const { latitude, longitude } = position.coords;
-            const data = await fetchWeatherByCoordinates(
-              latitude, 
-              longitude, 
-              isCelsius ? 'metric' : 'imperial'
-            );
-            setWeatherData(data);
-            setCity(data.location.city);
-            setLoading(false);
-          } catch (err) {
-            setError(err instanceof Error ? err.message : 'An unknown error occurred');
-            setLoading(false);
-            // Fall back to default city
-            fetchWeatherData(city);
-          }
-        },
-        (err) => {
-          console.error('Error getting location:', err);
-          
-          // Handle specific geolocation errors
-          let errorMessage = '';
-          switch(err.code) {
-            case 1: // PERMISSION_DENIED
-              errorMessage = 'Location access was denied. Using default city.';
-              break;
-            case 2: // POSITION_UNAVAILABLE
-              errorMessage = 'Your location could not be determined. Using default city.';
-              break;
-            case 3: // TIMEOUT
-              errorMessage = 'Location request timed out. Using default city.';
-              break;
-            default:
-              errorMessage = 'An unknown location error occurred. Using default city.';
-          }
-          
-          setLocationError(errorMessage);
-          // Fall back to default city
-          fetchWeatherData(city);
-        },
-        // Add options for better performance and user experience
-        {
-          enableHighAccuracy: false, // Set to false for faster response
-          timeout: 10000, // 10 seconds timeout
-          maximumAge: 600000 // Cache location for 10 minutes
-        }
-      );
-    } else {
-      // Geolocation not supported
-      setLocationError('Location services are not supported by your browser. Using default city.');
-      fetchWeatherData(city);
-    }
-  };
-
-  // Function to retry getting user location
-  const retryGeolocation = () => {
-    setLocationError('');
-    getUserLocation();
-  };
-
   // Initial load
   useEffect(() => {
-    getUserLocation();
+    fetchWeatherData(city);
     
     // Update date every minute
     const interval = setInterval(() => {
@@ -171,6 +117,7 @@ export default function WeatherDashboard() {
     }, 60000);
     
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading && !weatherData) {
@@ -237,19 +184,6 @@ export default function WeatherDashboard() {
         
         {/* Right panel - Search, forecast and details */}
         <div className="md:col-span-8 p-6">
-          {/* Location error notification */}
-          {locationError && (
-            <div className="mb-4 alert alert-warning flex justify-between items-center">
-              <span>{locationError}</span>
-              <button 
-                onClick={retryGeolocation} 
-                className="btn btn-sm btn-outline"
-              >
-                Retry
-              </button>
-            </div>
-          )}
-          
           {/* Search bar and unit toggle */}
           <div className="flex gap-2 mb-8">
             <form onSubmit={handleSearch} className="flex-grow flex gap-2">
@@ -277,20 +211,6 @@ export default function WeatherDashboard() {
                 °F
               </button>
             </div>
-          </div>
-          
-          {/* Current location button */}
-          <div className="mb-4">
-            <button 
-              onClick={retryGeolocation} 
-              className="btn btn-outline btn-sm"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              Use My Location
-            </button>
           </div>
           
           {/* 3-day forecast */}
