@@ -1,17 +1,15 @@
-#!/bin/bash
+#!/usr/bin/env bash
+echo "Running composer"
+composer install --no-dev --working-dir=/var/www/html
 
-# Navigate to the application directory
-cd /var/www/html
-
-# Install PHP dependencies
-composer install --no-dev --optimize-autoloader
-
-# Set permissions
-chown -R www-data:www-data /var/www/html
-chmod -R 755 /var/www/html/storage
-
-# Run Laravel commands
+echo "Caching config..."
 php artisan config:cache
+
+echo "Caching routes..."
 php artisan route:cache
-php artisan view:cache
-php artisan migrate --force
+
+echo "Running migrations..."
+php artisan migrate --force 
+
+echo "Publishing cloudinary provider..."
+php artisan vendor:publish --provider="CloudinaryLabs\CloudinaryLaravel\CloudinaryServiceProvider" --tag="cloudinary-laravel-config"
