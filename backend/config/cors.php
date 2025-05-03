@@ -20,7 +20,7 @@ return [
     'allowed_methods' => ['*'],
 
     'allowed_origins' => [
-    env('CORS_ALLOWED_ORIGINS', 'https://weather-piebvskjx-lybrooks-projects.vercel.app/'),
+    env('CORS_ALLOWED_ORIGINS', 'https://weather-piebvskjx-lybrooks-projects.vercel.app'),
 ],
 
     'allowed_origins_patterns' => [],
