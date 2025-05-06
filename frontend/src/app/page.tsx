@@ -1,12 +1,22 @@
-// app/page.tsx
 "use client";
 
-import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
+import { useState, useEffect, useMemo } from 'react';
 import WeatherIcon from '@/components/WeatherIcon';
-import DailyForecast from '@/components/DailyForecast';
-import WindStatus from '@/components/WindStatus';
-import HumidityStatus from '@/components/HumidityStatus';
 import { fetchWeatherByCity, WeatherResponse } from '@/services/weatherService';
+
+// Dynamic imports for non-critical components
+const DailyForecast = dynamic(() => import('@/components/DailyForecast'), {
+  loading: () => <div className="h-24 flex items-center justify-center text-gray-500">Loading forecast...</div>,
+});
+
+const WindStatus = dynamic(() => import('@/components/WindStatus'), {
+  loading: () => <div className="h-24 flex items-center justify-center text-gray-500">Loading wind status...</div>,
+});
+
+const HumidityStatus = dynamic(() => import('@/components/HumidityStatus'), {
+  loading: () => <div className="h-24 flex items-center justify-center text-gray-500">Loading humidity...</div>,
+});
 
 export default function WeatherDashboard() {
   const [city, setCity] = useState('Nairobi');
@@ -14,45 +24,30 @@ export default function WeatherDashboard() {
   const [weatherData, setWeatherData] = useState<WeatherResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  // Get the temperature unit from localStorage or default to celsius
   const [isCelsius, setIsCelsius] = useState(() => {
-    // Check if we're in the browser environment
     if (typeof window !== 'undefined') {
       const savedUnit = localStorage.getItem('temperatureUnit');
       return savedUnit === 'imperial' ? false : true;
     }
-    return true; // Default to celsius
+    return true;
   });
   const [date, setDate] = useState(new Date());
 
-  // Convert temperature based on selected unit
-  const convertTemp = (temp: number) => {
-    return Math.round(temp);
-  };
+  const convertTemp = (temp: number) => Math.round(temp);
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp * 1000);
-    return date.toLocaleDateString('en-US', {
-      day: 'numeric',
-      month: 'short',
-    });
+    return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
   };
 
-  // Extract daily forecasts from the forecast data
   const getDailyForecasts = () => {
     if (!weatherData?.forecast?.list) return [];
-    
     const todayDate = new Date().setHours(0, 0, 0, 0);
     const uniqueDays = new Map();
-    
     weatherData.forecast.list.forEach(item => {
       const forecastDate = new Date(item.dt * 1000);
       const forecastDay = forecastDate.setHours(0, 0, 0, 0);
-      
-      // Skip today's forecasts
       if (forecastDay === todayDate) return;
-      
-      // Get noon forecasts or closest to noon
       if (!uniqueDays.has(forecastDay) || 
           Math.abs(forecastDate.getHours() - 12) < 
           Math.abs(new Date(uniqueDays.get(forecastDay).dt * 1000).getHours() - 12)) {
@@ -63,16 +58,15 @@ export default function WeatherDashboard() {
         });
       }
     });
-    
     return Array.from(uniqueDays.values()).slice(0, 3);
   };
 
-  // Fetch weather data by city name
+  const dailyForecasts = useMemo(() => getDailyForecasts(), [weatherData]);
+
   const fetchWeatherData = async (cityName: string) => {
     try {
       setLoading(true);
       setError('');
-      
       const data = await fetchWeatherByCity(cityName, isCelsius ? 'metric' : 'imperial');
       setWeatherData(data);
       setCity(data.location.city);
@@ -83,41 +77,24 @@ export default function WeatherDashboard() {
     }
   };
 
-  // Handle search form submission
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchCity.trim()) {
-      fetchWeatherData(searchCity);
-    }
+    if (searchCity.trim()) fetchWeatherData(searchCity);
   };
 
-  // Toggle temperature unit
   const toggleUnit = () => {
     const newUnit = !isCelsius;
     setIsCelsius(newUnit);
-    
-    // Save to localStorage
     if (typeof window !== 'undefined') {
       localStorage.setItem('temperatureUnit', newUnit ? 'metric' : 'imperial');
     }
-    
-    // Refetch data with new unit
-    if (city) {
-      fetchWeatherData(city);
-    }
+    if (city) fetchWeatherData(city);
   };
 
-  // Initial load
   useEffect(() => {
     fetchWeatherData(city);
-    
-    // Update date every minute
-    const interval = setInterval(() => {
-      setDate(new Date());
-    }, 60000);
-    
+    const interval = setInterval(() => setDate(new Date()), 60000);
     return () => clearInterval(interval);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading && !weatherData) {
@@ -138,14 +115,10 @@ export default function WeatherDashboard() {
     );
   }
 
-  const dailyForecasts = getDailyForecasts();
-
   return (
     <div className="container mx-auto p-4 max-w-6xl">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 bg-white rounded-lg shadow-lg overflow-hidden">
-        {/* Left panel - Current weather */}
         <div className="md:col-span-4 bg-gray-50 p-6 flex flex-col justify-between">
-          {/* Weather icon and temp */}
           <div className="mb-4">
             <div className="flex justify-center">
               {weatherData && weatherData.current && (
@@ -166,8 +139,6 @@ export default function WeatherDashboard() {
               </p>
             </div>
           </div>
-          
-          {/* Date and location */}
           <div className="text-center mt-auto">
             <p className="text-lg text-gray-600">
               {date.toLocaleDateString('en-US', {
@@ -181,10 +152,7 @@ export default function WeatherDashboard() {
             </p>
           </div>
         </div>
-        
-        {/* Right panel - Search, forecast and details */}
         <div className="md:col-span-8 p-6">
-          {/* Search bar and unit toggle */}
           <div className="flex gap-2 mb-8">
             <form onSubmit={handleSearch} className="flex-grow flex gap-2">
               <input
@@ -196,7 +164,6 @@ export default function WeatherDashboard() {
               />
               <button type="submit" className="btn btn-primary">Go</button>
             </form>
-            
             <div className="flex gap-2">
               <button 
                 className={`btn ${isCelsius ? 'btn-primary' : 'btn-outline'}`}
@@ -212,8 +179,6 @@ export default function WeatherDashboard() {
               </button>
             </div>
           </div>
-          
-          {/* 3-day forecast */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             {dailyForecasts.map((day, index) => (
               <DailyForecast
@@ -225,15 +190,9 @@ export default function WeatherDashboard() {
               />
             ))}
           </div>
-          
-          {/* Weather details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <WindStatus 
-              speed={weatherData?.current?.wind?.speed || 0} 
-            />
-            <HumidityStatus 
-              humidity={weatherData?.current?.main?.humidity || 0} 
-            />
+            <WindStatus speed={weatherData?.current?.wind?.speed || 0} />
+            <HumidityStatus humidity={weatherData?.current?.main?.humidity || 0} />
           </div>
         </div>
       </div>
