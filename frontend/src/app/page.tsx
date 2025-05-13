@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from 'next/dynamic';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import WeatherIcon from '@/components/WeatherIcon';
 import { fetchWeatherByCity, WeatherResponse } from '@/services/weatherService';
 
@@ -33,14 +33,14 @@ export default function WeatherDashboard() {
   });
   const [date, setDate] = useState(new Date());
 
-  const convertTemp = (temp: number) => Math.round(temp);
+  const convertTemp = useCallback((temp: number) => Math.round(temp), []);
 
-  const formatDate = (timestamp: number) => {
+  const formatDate = useCallback((timestamp: number) => {
     const date = new Date(timestamp * 1000);
     return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
-  };
+  }, []);
 
-  const getDailyForecasts = () => {
+  const getDailyForecasts = useCallback(() => {
     if (!weatherData?.forecast?.list) return [];
     const todayDate = new Date().setHours(0, 0, 0, 0);
     const uniqueDays = new Map();
@@ -59,11 +59,11 @@ export default function WeatherDashboard() {
       }
     });
     return Array.from(uniqueDays.values()).slice(0, 3);
-  };
+  }, [weatherData]);
 
-  const dailyForecasts = useMemo(() => getDailyForecasts(), [weatherData]);
+  const dailyForecasts = useMemo(() => getDailyForecasts(), [getDailyForecasts]);
 
-  const fetchWeatherData = async (cityName: string) => {
+  const fetchWeatherData = useCallback(async (cityName: string) => {
     try {
       setLoading(true);
       setError('');
@@ -75,27 +75,27 @@ export default function WeatherDashboard() {
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
       setLoading(false);
     }
-  };
+  }, [isCelsius]);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (searchCity.trim()) fetchWeatherData(searchCity);
-  };
+  }, [searchCity, fetchWeatherData]);
 
-  const toggleUnit = () => {
+  const toggleUnit = useCallback(() => {
     const newUnit = !isCelsius;
     setIsCelsius(newUnit);
     if (typeof window !== 'undefined') {
       localStorage.setItem('temperatureUnit', newUnit ? 'metric' : 'imperial');
     }
     if (city) fetchWeatherData(city);
-  };
+  }, [city, fetchWeatherData, isCelsius]);
 
   useEffect(() => {
     fetchWeatherData(city);
     const interval = setInterval(() => setDate(new Date()), 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [city, fetchWeatherData]);
 
   if (loading && !weatherData) {
     return (
@@ -167,13 +167,13 @@ export default function WeatherDashboard() {
             <div className="flex gap-2">
               <button 
                 className={`btn ${isCelsius ? 'btn-primary' : 'btn-outline'}`}
-                onClick={() => toggleUnit()}
+                onClick={toggleUnit}
               >
                 °C
               </button>
               <button 
                 className={`btn ${!isCelsius ? 'btn-primary' : 'btn-outline'}`}
-                onClick={() => toggleUnit()}
+                onClick={toggleUnit}
               >
                 °F
               </button>
