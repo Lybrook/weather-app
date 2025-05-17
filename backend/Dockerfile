@@ -1,6 +1,6 @@
 FROM dunglas/frankenphp:php8.4-bookworm
 
-ENV SERVER_NAME=":8080"
+ENV SERVER_NAME=":8080" 
 
 RUN install-php-extensions @composer
 
@@ -15,3 +15,8 @@ RUN composer install \
   --no-interaction \
   --no-progress \
   --no-scripts
+
+# Copy and set up the entrypoint script
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
