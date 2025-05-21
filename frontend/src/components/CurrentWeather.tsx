@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import Image from 'next/image';
 import { useWeather } from '@/context/WeatherContext';
 import { getWeatherIconUrl, formatDate } from '@/utils/weatherApi';
 
@@ -11,7 +12,7 @@ export default function CurrentWeather() {
     return null;
   }
 
-  const { weather, main, wind, sys, dt, timezone } = currentWeather;
+  const { weather, main, wind, dt, timezone } = currentWeather;
   const weatherIcon = weather[0].icon;
   const weatherDescription = weather[0].description;
   const temperature = Math.round(main.temp);
@@ -24,11 +25,13 @@ export default function CurrentWeather() {
         <div className="flex flex-col items-center md:items-start">
           <h2 className="text-2xl font-bold mb-1">{city.name}, {city.country}</h2>
           <p className="text-gray-500">{formattedDate}</p>
-          <div className="flex items-center mt-4">
-            <img 
-              src={getWeatherIconUrl(weatherIcon)} 
+            <Image
+              src={getWeatherIconUrl(weatherIcon)}
               alt={weatherDescription}
+              width={64}
+              height={64}
               className="w-16 h-16"
+              priority
             />
             <div className="ml-2">
               <p className="text-4xl font-bold">{temperature}{unitSymbol}</p>
@@ -56,6 +59,5 @@ export default function CurrentWeather() {
           </div>
         </div>
       </div>
-    </div>
   );
 }

@@ -14,7 +14,7 @@ export default function HumidityInfo() {
   const humidity = main.humidity;
 
   // Determine humidity level for visual indicator
-  const getHumidityLevel = (value) => {
+  const getHumidityLevel = (value: number) => {
     if (value < 30) return 'Low';
     if (value < 60) return 'Moderate';
     return 'High';
@@ -23,7 +23,7 @@ export default function HumidityInfo() {
   const humidityLevel = getHumidityLevel(humidity);
   
   // Determine color based on humidity level
-  const getHumidityColor = (level) => {
+  const getHumidityColor = (level: string) => {
     switch (level) {
       case 'Low': return 'text-yellow-500';
       case 'Moderate': return 'text-green-500';

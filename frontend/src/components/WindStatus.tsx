@@ -14,7 +14,7 @@ export default function WindStatus() {
   const speedUnit = temperatureUnit === 'celsius' ? 'm/s' : 'mph';
   
   // Convert wind direction degrees to cardinal direction
-  const getWindDirection = (degrees) => {
+  const getWindDirection = (degrees: number) => {
     const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
     const index = Math.round(degrees / 22.5) % 16;
     return directions[index];
