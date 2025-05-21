@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { getWindDirection } from '@/utils/api';
-import { useAppContext } from '@/context/AppContext';
+import { getWindDirection } from '../utils/api';
+import { useAppContext } from '../context/AppContext';
 
 interface WindStatusProps {
   speed: number;

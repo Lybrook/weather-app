@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { City } from '@/types';
-import { searchCities } from '@/utils/api';
-import { useAppContext } from '@/context/AppContext';
+import { City } from '../types';
+import { searchCities } from '../utils/api';
+import { useAppContext } from '../context/AppContext';
 
 const SearchBox = () => {
-  const { state, setSelectedCity, setIsLoading, setError } = useAppContext();
+  const { setSelectedCity, setError } = useAppContext();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<City[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -94,7 +94,7 @@ const SearchBox = () => {
       {showDropdown && results.length > 0 && (
         <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 rounded-md shadow-lg">
           <ul className="menu menu-sm">
-            {results.map((city, index) => (
+            {results.map((city) => (
               <li key={`${city.name}-${city.lat}-${city.lon}`}>
                 <button
                   className="flex items-center px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"

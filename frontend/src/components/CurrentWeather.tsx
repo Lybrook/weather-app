@@ -1,9 +1,11 @@
 'use client';
 
 import React from 'react';
-import { CurrentWeather as CurrentWeatherType } from '@/types';
-import { formatDate, formatTemperature } from '@/utils/api';
-import { useAppContext } from '@/context/AppContext';
+// Update the import path to the correct relative path if '@/types' is not resolved
+import { CurrentWeather as CurrentWeatherType } from '../types';
+import { formatDate, formatTemperature } from '../utils/api';
+import { useAppContext } from '../context/AppContext';
+// Make sure WeatherIcon.tsx exists in the same folder, or update the path if it's elsewhere
 import WeatherIcon from './WeatherIcon';
 
 interface CurrentWeatherProps {

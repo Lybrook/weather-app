@@ -1,9 +1,11 @@
 'use client';
 
 import React from 'react';
-import { ForecastDay } from '@/types';
-import { formatDate, formatTemperature } from '@/utils/api';
-import { useAppContext } from '@/context/AppContext';
+// Update the path below if your types file is located elsewhere
+import { ForecastDay } from '../types';
+import { formatDate, formatTemperature } from '../utils/api';
+import { useAppContext } from '../context/AppContext';
+// Make sure WeatherIcon.tsx exists in the same folder, or update the path below if it's elsewhere
 import WeatherIcon from './WeatherIcon';
 
 interface ForecastDayCardProps {

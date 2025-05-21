@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { AppProvider } from '@/context/AppContext';
-import { useAppContext } from '@/context/AppContext';
+import { AppProvider } from '../context/AppContext';
+import { useAppContext } from '../context/AppContext';
 import SearchBox from '@/components/SearchBox';
-import UnitToggle from '@/components/UnitToggle';
+import UnitToggle from '../components/UnitToggle';
 import CurrentWeather from '@/components/CurrentWeather';
-import ForecastSection from '@/components/ForecastSection';
+import ForecastSection from '@/components/ForecastStatus';
 import WeatherStats from '@/components/WeatherStats';
-import { getCurrentWeather, getWeatherForecast } from '@/utils/api';
-import { CurrentWeather as CurrentWeatherType, WeatherForecast } from '@/types';
+import { getCurrentWeather, getWeatherForecast } from '../utils/api';
+import { CurrentWeather as CurrentWeatherType, WeatherForecast } from '../types';
 
 const WeatherApp = () => {
   const { state, setIsLoading, setError } = useAppContext();

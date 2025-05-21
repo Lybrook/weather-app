@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { TemperatureUnit } from '@/types';
-import { useAppContext } from '@/context/AppContext';
+import { TemperatureUnit } from '../types';
+import { useAppContext } from '../context/AppContext';
 
 const UnitToggle = () => {
   const { state, setTemperatureUnit } = useAppContext();
