@@ -1,5 +1,7 @@
 FROM dunglas/frankenphp:php8.4-bookworm
 
+RUN install-php-extensions @composer
+
 # Set working directory
 WORKDIR /app
 
@@ -26,7 +28,13 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 COPY . /app
 
 # Install dependencies
-RUN composer install --no-interaction --optimize-autoloader --no-dev
+RUN composer install \
+  --ignore-platform-reqs \
+  --optimize-autoloader \
+  --prefer-dist \
+  --no-interaction \
+  --no-progress \
+  --no-scripts
 
 # Install Laravel Octane
 RUN composer require laravel/octane --no-interaction
@@ -38,5 +46,3 @@ RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache
 # Expose port
 EXPOSE 8000
 
-# Start FrankenPHP with Octane
-CMD ["php", "artisan", "octane:start", "--server=frankenphp", "--host=0.0.0.0", "--port=${PORT:-8000}"]
