@@ -1,63 +1,46 @@
-"use client";
+'use client';
 
 import React from 'react';
-import Image from 'next/image';
-import { useWeather } from '@/context/WeatherContext';
-import { getWeatherIconUrl, formatDate } from '@/utils/weatherApi';
+import { CurrentWeather as CurrentWeatherType } from '@/types';
+import { formatDate, formatTemperature } from '@/utils/api';
+import { useAppContext } from '@/context/AppContext';
+import WeatherIcon from './WeatherIcon';
 
-export default function CurrentWeather() {
-  const { currentWeather, temperatureUnit, city } = useWeather();
+interface CurrentWeatherProps {
+  data: CurrentWeatherType;
+}
 
-  if (!currentWeather || !city) {
-    return null;
-  }
-
-  const { weather, main, wind, dt, timezone } = currentWeather;
-  const weatherIcon = weather[0].icon;
-  const weatherDescription = weather[0].description;
-  const temperature = Math.round(main.temp);
-  const unitSymbol = temperatureUnit === 'celsius' ? '°C' : '°F';
-  const formattedDate = formatDate(dt, timezone);
-
+const CurrentWeather: React.FC<CurrentWeatherProps> = ({ data }) => {
+  const { state } = useAppContext();
+  const { temperatureUnit } = state;
+  
   return (
     <div className="card bg-base-100 shadow-xl p-6">
-      <div className="flex flex-col items-center md:flex-row md:justify-between">
-        <div className="flex flex-col items-center md:items-start">
-          <h2 className="text-2xl font-bold mb-1">{city.name}, {city.country}</h2>
-          <p className="text-gray-500">{formattedDate}</p>
-            <Image
-              src={getWeatherIconUrl(weatherIcon)}
-              alt={weatherDescription}
-              width={64}
-              height={64}
-              className="w-16 h-16"
-              priority
-            />
-            <div className="ml-2">
-              <p className="text-4xl font-bold">{temperature}{unitSymbol}</p>
-              <p className="text-gray-600 capitalize">{weatherDescription}</p>
+      <div className="flex flex-col md:flex-row justify-between items-center">
+        <div className="mb-4 md:mb-0">
+          <h2 className="text-2xl font-bold">
+            {data.location.name}, {data.location.country}
+          </h2>
+          <p className="text-gray-500">{formatDate(data.current.dt)}</p>
+          
+          <div className="mt-4">
+            <div className="flex items-center">
+              <span className="text-5xl font-bold">
+                {formatTemperature(data.current.temp, temperatureUnit)}
+              </span>
             </div>
+            <p className="text-gray-500">
+              Feels like {formatTemperature(data.current.feels_like, temperatureUnit)}
+            </p>
           </div>
         </div>
         
-        <div className="mt-6 md:mt-0 grid grid-cols-2 gap-4">
-          <div className="text-center">
-            <p className="text-gray-500">Humidity</p>
-            <p className="text-xl font-semibold">{main.humidity}%</p>
-          </div>
-          <div className="text-center">
-            <p className="text-gray-500">Wind</p>
-            <p className="text-xl font-semibold">{wind.speed} {temperatureUnit === 'celsius' ? 'm/s' : 'mph'}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-gray-500">Feels Like</p>
-            <p className="text-xl font-semibold">{Math.round(main.feels_like)}{unitSymbol}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-gray-500">Pressure</p>
-            <p className="text-xl font-semibold">{main.pressure} hPa</p>
-          </div>
+        <div className="flex flex-col items-center">
+          <WeatherIcon weather={data.current.weather} size="lg" />
         </div>
       </div>
+    </div>
   );
-}
+};
+
+export default CurrentWeather;

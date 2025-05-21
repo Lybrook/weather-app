@@ -1,57 +1,41 @@
-"use client";
+'use client';
 
 import React from 'react';
-import { useWeather } from '@/context/WeatherContext';
+import { getWindDirection } from '@/utils/api';
+import { useAppContext } from '@/context/AppContext';
 
-export default function WindStatus() {
-  const { currentWeather, temperatureUnit } = useWeather();
+interface WindStatusProps {
+  speed: number;
+  degrees: number;
+}
 
-  if (!currentWeather) {
-    return null;
-  }
-
-  const { wind } = currentWeather;
-  const speedUnit = temperatureUnit === 'celsius' ? 'm/s' : 'mph';
+const WindStatus: React.FC<WindStatusProps> = ({ speed, degrees }) => {
+  const { state } = useAppContext();
+  const { temperatureUnit } = state;
   
-  // Convert wind direction degrees to cardinal direction
-  const getWindDirection = (degrees: number) => {
-    const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
-    const index = Math.round(degrees / 22.5) % 16;
-    return directions[index];
-  };
-
-  const windDirection = getWindDirection(wind.deg);
+  // Format wind speed with the correct unit
+  const formattedSpeed = `${speed.toFixed(1)} ${temperatureUnit === 'metric' ? 'm/s' : 'mph'}`;
+  const direction = getWindDirection(degrees);
 
   return (
-    <div className="card bg-base-100 shadow-md p-4">
-      <h3 className="text-lg font-semibold mb-2">Wind Status</h3>
+    <div className="card bg-base-100 shadow-sm p-4">
+      <h3 className="text-lg font-medium mb-2">Wind Status</h3>
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-3xl font-bold">{wind.speed} <span className="text-lg">{speedUnit}</span></p>
-          <p className="text-gray-500 mt-1">Speed</p>
-        </div>
-        <div className="flex flex-col items-center">
-          <div className="relative w-16 h-16 rounded-full border-2 border-gray-200 flex items-center justify-center mb-2">
-            <div 
-              className="absolute w-1 h-8 bg-primary" 
-              style={{ 
-                transformOrigin: 'bottom center',
-                transform: `translateY(-4px) rotate(${wind.deg}deg)`
-              }}
-            >
-              <div className="w-3 h-3 bg-primary absolute -top-1.5 left-1/2 transform -translate-x-1/2 rotate-45"></div>
-            </div>
+        <div className="text-3xl font-bold">{formattedSpeed}</div>
+        <div className="flex items-center">
+          <div 
+            className="bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center"
+            style={{ transform: `rotate(${degrees}deg)` }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 3a1 1 0 00-1 1v11.586l-2.293-2.293a1 1 0 10-1.414 1.414l4 4a1 1 0 001.414 0l4-4a1 1 0 00-1.414-1.414L11 15.586V4a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
           </div>
-          <p className="text-lg font-medium">{windDirection}</p>
-          <p className="text-gray-500 text-sm">{wind.deg}°</p>
+          <span className="ml-2">{direction}</span>
         </div>
-        {wind.gust && (
-          <div>
-            <p className="text-2xl font-bold">{wind.gust} <span className="text-lg">{speedUnit}</span></p>
-            <p className="text-gray-500 mt-1">Gust</p>
-          </div>
-        )}
       </div>
     </div>
   );
-}
+};
+
+export default WindStatus;

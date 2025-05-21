@@ -2,7 +2,8 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\WeatherController;
+use App\Http\Controllers\Api\WeatherController;
+use App\Http\Controllers\Api\GeocodingController;
 
 /*
 |--------------------------------------------------------------------------
@@ -15,8 +16,18 @@ use App\Http\Controllers\WeatherController;
 |
 */
 
-Route::middleware('api')->group(function () {
-    Route::get('/geocoding', [WeatherController::class, 'geocoding']);
-    Route::get('/weather/current', [WeatherController::class, 'currentWeather']);
-    Route::get('/weather/forecast', [WeatherController::class, 'forecast']);
+// Geocoding routes
+Route::prefix('geocoding')->group(function () {
+    Route::get('/search', [GeocodingController::class, 'search']);
+});
+
+// Weather routes
+Route::prefix('weather')->group(function () {
+    Route::get('/current', [WeatherController::class, 'current']);
+    Route::get('/forecast', [WeatherController::class, 'forecast']);
+});
+
+// Health check
+Route::get('/health', function () {
+    return response()->json(['status' => 'ok']);
 });
