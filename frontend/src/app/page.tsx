@@ -1,242 +1,71 @@
-// app/page.tsx
 "use client";
 
-import { useState, useEffect } from 'react';
-import WeatherIcon from '@/components/WeatherIcon';
-import DailyForecast from '@/components/DailyForecast';
+import React from 'react';
+import { WeatherProvider } from '@/context/WeatherContext';
+import SearchBox from '@/components/SearchBox';
+import TemperatureToggle from '@/components/TemperatureToggle';
+import CurrentWeather from '@/components/CurrentWeather';
+import ForecastWeather from '@/components/ForecastWeather';
 import WindStatus from '@/components/WindStatus';
-import HumidityStatus from '@/components/HumidityStatus';
-import { fetchWeatherByCity, WeatherResponse } from '@/services/weatherService';
+import HumidityInfo from '@/components/HumidityInfo';
+import { useWeather } from '@/context/WeatherContext';
 
-export default function WeatherDashboard() {
-  const [city, setCity] = useState('Nairobi');
-  const [searchCity, setSearchCity] = useState('');
-  const [weatherData, setWeatherData] = useState<WeatherResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  // Get the temperature unit from localStorage or default to celsius
-  const [isCelsius, setIsCelsius] = useState(() => {
-    // Check if we're in the browser environment
-    if (typeof window !== 'undefined') {
-      const savedUnit = localStorage.getItem('temperatureUnit');
-      return savedUnit === 'imperial' ? false : true;
-    }
-    return true; // Default to celsius
-  });
-  const [date, setDate] = useState(new Date());
-
-  // Convert temperature based on selected unit
-  const convertTemp = (temp: number) => {
-    return Math.round(temp);
-  };
-
-  const formatDate = (timestamp: number) => {
-    const date = new Date(timestamp * 1000);
-    return date.toLocaleDateString('en-US', {
-      day: 'numeric',
-      month: 'short',
-    });
-  };
-
-  // Extract daily forecasts from the forecast data
-  const getDailyForecasts = () => {
-    if (!weatherData?.forecast?.list) return [];
-    
-    const todayDate = new Date().setHours(0, 0, 0, 0);
-    const uniqueDays = new Map();
-    
-    weatherData.forecast.list.forEach(item => {
-      const forecastDate = new Date(item.dt * 1000);
-      const forecastDay = forecastDate.setHours(0, 0, 0, 0);
-      
-      // Skip today's forecasts
-      if (forecastDay === todayDate) return;
-      
-      // Get noon forecasts or closest to noon
-      if (!uniqueDays.has(forecastDay) || 
-          Math.abs(forecastDate.getHours() - 12) < 
-          Math.abs(new Date(uniqueDays.get(forecastDay).dt * 1000).getHours() - 12)) {
-        uniqueDays.set(forecastDay, {
-          dt: item.dt,
-          temp: item.main.temp,
-          icon: item.weather[0].icon
-        });
-      }
-    });
-    
-    return Array.from(uniqueDays.values()).slice(0, 3);
-  };
-
-  // Fetch weather data by city name
-  const fetchWeatherData = async (cityName: string) => {
-    try {
-      setLoading(true);
-      setError('');
-      
-      const data = await fetchWeatherByCity(cityName, isCelsius ? 'metric' : 'imperial');
-      setWeatherData(data);
-      setCity(data.location.city);
-      setLoading(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
-      setLoading(false);
-    }
-  };
-
-  // Handle search form submission
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchCity.trim()) {
-      fetchWeatherData(searchCity);
-    }
-  };
-
-  // Toggle temperature unit
-  const toggleUnit = () => {
-    const newUnit = !isCelsius;
-    setIsCelsius(newUnit);
-    
-    // Save to localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('temperatureUnit', newUnit ? 'metric' : 'imperial');
-    }
-    
-    // Refetch data with new unit
-    if (city) {
-      fetchWeatherData(city);
-    }
-  };
-
-  // Initial load
-  useEffect(() => {
-    fetchWeatherData(city);
-    
-    // Update date every minute
-    const interval = setInterval(() => {
-      setDate(new Date());
-    }, 60000);
-    
-    return () => clearInterval(interval);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  if (loading && !weatherData) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="loading loading-spinner loading-lg"></div>
-      </div>
-    );
-  }
-
-  if (error && !weatherData) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="alert alert-error">
-          <span>{error}</span>
-        </div>
-      </div>
-    );
-  }
-
-  const dailyForecasts = getDailyForecasts();
+function WeatherDashboard() {
+  const { city, isLoading, error } = useWeather();
 
   return (
-    <div className="container mx-auto p-4 max-w-6xl">
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 bg-white rounded-lg shadow-lg overflow-hidden">
-        {/* Left panel - Current weather */}
-        <div className="md:col-span-4 bg-gray-50 p-6 flex flex-col justify-between">
-          {/* Weather icon and temp */}
-          <div className="mb-4">
-            <div className="flex justify-center">
-              {weatherData && weatherData.current && (
-                <WeatherIcon 
-                  iconCode={weatherData.current.weather[0].icon}
-                  size={120}
-                  className="mb-4"
-                />
-              )}
-            </div>
-            <div className="text-center">
-              <h1 className="text-5xl font-bold">
-                {weatherData && weatherData.current && 
-                  convertTemp(weatherData.current.main.temp)}°{isCelsius ? 'C' : 'F'}
-              </h1>
-              <p className="text-2xl text-gray-600 mt-2">
-                {weatherData?.current?.weather[0].main}
-              </p>
-            </div>
-          </div>
-          
-          {/* Date and location */}
-          <div className="text-center mt-auto">
-            <p className="text-lg text-gray-600">
-              {date.toLocaleDateString('en-US', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric'
-              })}
-            </p>
-            <p className="text-xl font-medium">
-              {weatherData?.location?.city}, {weatherData?.location?.country}
-            </p>
-          </div>
-        </div>
-        
-        {/* Right panel - Search, forecast and details */}
-        <div className="md:col-span-8 p-6">
-          {/* Search bar and unit toggle */}
-          <div className="flex gap-2 mb-8">
-            <form onSubmit={handleSearch} className="flex-grow flex gap-2">
-              <input
-                type="text"
-                placeholder="Search city..."
-                className="input input-bordered w-full"
-                value={searchCity}
-                onChange={(e) => setSearchCity(e.target.value)}
-              />
-              <button type="submit" className="btn btn-primary">Go</button>
-            </form>
-            
-            <div className="flex gap-2">
-              <button 
-                className={`btn ${isCelsius ? 'btn-primary' : 'btn-outline'}`}
-                onClick={() => toggleUnit()}
-              >
-                °C
-              </button>
-              <button 
-                className={`btn ${!isCelsius ? 'btn-primary' : 'btn-outline'}`}
-                onClick={() => toggleUnit()}
-              >
-                °F
-              </button>
-            </div>
-          </div>
-          
-          {/* 3-day forecast */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            {dailyForecasts.map((day, index) => (
-              <DailyForecast
-                key={index}
-                date={formatDate(day.dt)}
-                temp={convertTemp(day.temp)}
-                icon={day.icon}
-                unit={isCelsius ? 'C' : 'F'}
-              />
-            ))}
-          </div>
-          
-          {/* Weather details */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <WindStatus 
-              speed={weatherData?.current?.wind?.speed || 0} 
-            />
-            <HumidityStatus 
-              humidity={weatherData?.current?.main?.humidity || 0} 
-            />
-          </div>
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+        <h1 className="text-3xl font-bold mb-4 md:mb-0">Weather App</h1>
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+          <SearchBox />
+          <TemperatureToggle />
         </div>
       </div>
+
+      {isLoading && (
+        <div className="flex justify-center items-center h-64">
+          <div className="loading loading-spinner loading-lg"></div>
+        </div>
+      )}
+
+      {error && (
+        <div className="alert alert-error mb-6">
+          <p>{error}</p>
+        </div>
+      )}
+
+      {city && !isLoading && (
+        <>
+          <CurrentWeather />
+          <ForecastWeather />
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <WindStatus />
+            <HumidityInfo />
+          </div>
+        </>
+      )}
+
+      {!city && !isLoading && (
+        <div className="text-center py-16">
+          <h2 className="text-2xl font-semibold mb-2">Welcome to Weather App</h2>
+          <p className="text-gray-600 mb-6">Search for a city to get started</p>
+          <div className="max-w-md mx-auto">
+            <SearchBox />
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <WeatherProvider>
+      <main className="min-h-screen bg-gray-50">
+        <WeatherDashboard />
+      </main>
+    </WeatherProvider>
   );
 }
