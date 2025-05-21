@@ -31,8 +31,6 @@ RUN composer install --no-interaction --optimize-autoloader --no-dev
 # Set permissions
 RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache
 
-# Generate Laravel key if not exists
-RUN php artisan key:generate --force
 
 # Expose port
 EXPOSE 8000
