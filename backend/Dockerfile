@@ -28,6 +28,9 @@ COPY . /app
 # Install dependencies
 RUN composer install --no-interaction --optimize-autoloader --no-dev
 
+# Install Laravel Octane
+RUN composer require laravel/octane --no-interaction
+
 # Set permissions
 RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache
 
