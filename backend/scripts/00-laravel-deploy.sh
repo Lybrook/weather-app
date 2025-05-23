@@ -11,6 +11,4 @@ php artisan route:cache
 echo "Running migrations..."
 php artisan migrate --force
 
-npm i && npm run build
-
 docker-compose up --build
