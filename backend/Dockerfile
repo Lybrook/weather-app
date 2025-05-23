@@ -1,48 +1,20 @@
-FROM dunglas/frankenphp:php8.4-bookworm
+FROM richarvey/nginx-php-fpm:3.1.6
 
-RUN install-php-extensions @composer
+COPY . .
 
-# Set working directory
-WORKDIR /app
+# Image config
+ENV SKIP_COMPOSER 1
+ENV WEBROOT /var/www/html/public
+ENV PHP_ERRORS_STDERR 1
+ENV RUN_SCRIPTS 1
+ENV REAL_IP_HEADER 1
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    libpng-dev \
-    libonig-dev \
-    libxml2-dev \
-    zip \
-    unzip \
-    libzip-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# Laravel config
+ENV APP_ENV production
+ENV APP_DEBUG false
+ENV LOG_CHANNEL stderr
 
-# Install PHP extensions
-RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
+# Allow composer to run as root
+ENV COMPOSER_ALLOW_SUPERUSER 1
 
-# Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
-# Copy application files
-COPY . /app
-
-# Install dependencies
-RUN composer install \
-  --ignore-platform-reqs \
-  --optimize-autoloader \
-  --prefer-dist \
-  --no-interaction \
-  --no-progress \
-  --no-scripts
-
-# Install Laravel Octane
-RUN composer require laravel/octane --no-interaction
-
-# Set permissions
-RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache
-
-
-# Expose port
-EXPOSE 8000
-
+CMD ["/start.sh"]
