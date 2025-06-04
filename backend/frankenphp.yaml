@@ -1,0 +1,6 @@
+listeners:
+  - address: 0.0.0.0:80
+    static:
+      root: public
+    php:
+      root: public
