@@ -1,71 +1,49 @@
-FROM dunglas/frankenphp:1.1-builder-php8.2.16
+FROM php:8.2-fpm
 
-# Image config
-ENV SKIP_COMPOSER=1
-ENV WEBROOT=/var/www/html/public
-ENV PHP_ERRORS_STDERR=1
-ENV RUN_SCRIPTS=1
-ENV REAL_IP_HEADER=1
-
-# Laravel config
-ENV APP_ENV=production
-ENV APP_DEBUG=false
-ENV LOG_CHANNEL=stderr
-
-# Allow composer to run as root
-ENV COMPOSER_ALLOW_SUPERUSER=1
-# Set Caddy server name to "localhost" for Render
-ENV SERVER_NAME="localhost"
-
-# Install dependencies
-RUN apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
     git \
+    curl \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    zip \
     unzip \
-    librabbitmq-dev \
-    libpq-dev \
     supervisor \
-    && rm -rf /var/lib/apt/lists/*
+    nginx
+
+# Clear cache
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions
-RUN install-php-extensions \
-    gd \
-    pcntl \
-    opcache \
-    pdo \
-    pdo_mysql \
-    redis
+RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
 
-# Copy composer binary
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+# Get latest Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy application files
-COPY . .
+# Copy existing application directory contents
+COPY . /var/www/html
 
-# Copy PHP and supervisor config
-COPY ./.docker/php/php.ini /usr/local/etc/php/
-COPY ./.docker/etc/supervisor.d/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/sites-available/default
 
-# Install PHP extensions
-RUN pecl install xdebug \
-    && docker-php-ext-enable xdebug
+# Install dependencies
+RUN composer install --optimize-autoloader --no-dev
 
-# Install Laravel dependencies
-RUN composer install --no-dev --prefer-dist
+# Generate key
+RUN php artisan key:generate
 
 # Set permissions
-RUN chown -R www-data:www-data storage bootstrap/cache
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Fix permission issue with FrankenPHP on Render
-RUN setcap -r /usr/local/bin/frankenphp
+# Expose port 80
+EXPOSE 80
 
-# Expose ports
-EXPOSE 80 443
+# Copy supervisor configuration
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Start Supervisor
-ENTRYPOINT ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
-# Start Caddy server
-CMD ["/start.sh"]
+# Start supervisor
+CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
