@@ -14,9 +14,8 @@ ENV LOG_CHANNEL=stderr
 
 # Allow composer to run as root
 ENV COMPOSER_ALLOW_SUPERUSER=1
-# Set Caddy server name to "http://" to serve on 80 and not 443
-# Read more: https://frankenphp.dev/docs/config/#environment-variables
-ENV SERVER_NAME="http://"
+# Set Caddy server name to "localhost" for Render
+ENV SERVER_NAME="localhost"
 
 # Install dependencies
 RUN apt-get update \
@@ -60,11 +59,13 @@ RUN composer install --no-dev --prefer-dist
 # Set permissions
 RUN chown -R www-data:www-data storage bootstrap/cache
 
+# Fix permission issue with FrankenPHP on Render
+RUN setcap -r /usr/local/bin/frankenphp
+
 # Expose ports
 EXPOSE 80 443
 
 # Start Supervisor
 ENTRYPOINT ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
 # Start Caddy server
-# For Render, override the default CMD to use /start.sh
 CMD ["/start.sh"]
