@@ -4,6 +4,9 @@ FROM dunglas/frankenphp
 WORKDIR /app
 
 COPY . .
+# Install Composer
+RUN curl -sS https://getcomposer.org/installer | php && \
+    mv composer.phar /usr/local/bin/composer
 
 # Install Composer dependencies (production only)
 RUN composer install --optimize-autoloader --no-dev
